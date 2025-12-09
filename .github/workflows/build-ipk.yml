@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build IPK
@@ -70,14 +73,17 @@ jobs:
           # Compile
           make package/ech-wk/compile V=s
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ech-wk-ipk-${{ matrix.arch }}
-          path: sdk/bin/packages/*/base/*.ipk
+      - name: Generate Release Tag
+        id: tag
+        run: echo "release_tag=build-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Upload LuCI Artifacts
-        uses: actions/upload-artifact@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: luci-app-ech-wk-ipk-${{ matrix.arch }}
-          path: sdk/bin/packages/*/luci/*.ipk
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          name: Auto Build ${{ steps.tag.outputs.release_tag }}
+          files: |
+            sdk/bin/packages/*/base/*.ipk
+            sdk/bin/packages/*/luci/*.ipk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
