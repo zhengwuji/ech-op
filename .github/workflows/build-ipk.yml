@@ -66,15 +66,9 @@ jobs:
           cd sdk
           
           # Link our package
-          # We need to link the 'package/ech-wk' from our workspace to the SDK's package/ech-wk
-          # The SDK is in $GITHUB_WORKSPACE/sdk
-          # Our package is in $GITHUB_WORKSPACE/package/ech-wk
           ln -s $GITHUB_WORKSPACE/package/ech-wk package/ech-wk
           
           # Select the package
-          # We use .config to select the package. 
-          # CONFIG_PACKAGE_ech-wk=m
-          # CONFIG_PACKAGE_luci-app-ech-wk=m
           echo "CONFIG_PACKAGE_ech-wk=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-ech-wk=m" >> .config
           
@@ -83,6 +77,24 @@ jobs:
           
           # Compile
           make package/ech-wk/compile V=s
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipk-${{ matrix.arch }}
+          path: |
+            sdk/bin/packages/*/base/*.ipk
+            sdk/bin/packages/*/luci/*.ipk
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Generate Release Tag
         id: tag
@@ -93,8 +105,6 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.release_tag }}
           name: Auto Build ${{ steps.tag.outputs.release_tag }}
-          files: |
-            sdk/bin/packages/*/base/*.ipk
-            sdk/bin/packages/*/luci/*.ipk
+          files: artifacts/**/*.ipk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
