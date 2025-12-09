@@ -1,0 +1,29 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# OpenWrt SDK artifacts
+sdk/
+bin/
+build_dir/
+staging_dir/
+tmp/
+logs/
+.config
+.config.old
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Go
+go.sum

@@ -1,0 +1,299 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            exe_ext: .exe
+            archive_format: zip
+            archive_ext: .zip
+            target: desktop
+            artifact_suffix: ""
+            enable_gui: true
+            cgo_enabled: "0"
+
+          - os: macos-15-intel
+            goos: darwin
+            goarch: amd64
+            exe_ext: ""
+            archive_format: zip
+            archive_ext: .zip
+            target: desktop
+            artifact_suffix: ""
+            enable_gui: true
+            cgo_enabled: "0"
+
+          - os: macos-14
+            goos: darwin
+            goarch: arm64
+            exe_ext: ""
+            archive_format: zip
+            archive_ext: .zip
+            target: desktop
+            artifact_suffix: ""
+            enable_gui: true
+            cgo_enabled: "0"
+
+          # Linux 桌面版 amd64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            exe_ext: ""
+            archive_format: tar.gz
+            archive_ext: .tar.gz
+            target: desktop
+            artifact_suffix: ""
+            enable_gui: true
+            cgo_enabled: "0"
+
+          # Linux 桌面版 arm64
+          - os: ubuntu-24.04-arm
+            goos: linux
+            goarch: arm64
+            exe_ext: ""
+            archive_format: tar.gz
+            archive_ext: .tar.gz
+            target: desktop
+            artifact_suffix: ""
+            enable_gui: true
+            cgo_enabled: "0"
+
+          # ✅ 软路由 x86_64（无 GUI，静态构建）
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            exe_ext: ""
+            archive_format: tar.gz
+            archive_ext: .tar.gz
+            target: softrouter
+            artifact_suffix: "-softrouter"
+            enable_gui: false
+            cgo_enabled: "0"
+
+          # ✅ 软路由 arm64（RK3588 / 树莓派等）
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            exe_ext: ""
+            archive_format: tar.gz
+            archive_ext: .tar.gz
+            target: softrouter
+            artifact_suffix: "-softrouter"
+            enable_gui: false
+            cgo_enabled: "0"
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: false
+
+      - name: Initialize Go module
+        run: |
+          go mod init ech-workers || true
+          go mod tidy
+
+      - name: Build Go executable
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: ${{ matrix.cgo_enabled }}
+        run: |
+          echo "Building for $GOOS/$GOARCH (target=${{ matrix.target }}, CGO_ENABLED=$CGO_ENABLED)"
+          go build -trimpath -ldflags="-s -w" -o ech-workers${{ matrix.exe_ext }} ech-workers.go
+        shell: bash
+
+      # 下面这些步骤：只有打 tag 且 enable_gui == true 时才会执行，用来打包 GUI
+
+      - name: Set up Python
+        if: startsWith(github.ref, 'refs/tags/') && matrix.enable_gui == true
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.goos == 'linux' && matrix.enable_gui == true
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pyqt5 python3-pyqt5.qtsvg python3-dev
+        shell: bash
+
+      - name: Install PyInstaller and dependencies
+        if: startsWith(github.ref, 'refs/tags/') && matrix.enable_gui == true
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.goos }}" == "linux" ]; then
+            # Linux: 使用系统包中的 PyQt5，只安装其他依赖
+            pip install pyinstaller pystray Pillow
+            python -c "import PyQt5.QtWidgets; print('PyQt5 available')" || echo "PyQt5 not available, will skip GUI build"
+          else
+            # Windows / macOS: 从 PyPI 安装
+            pip install pyinstaller PyQt5 pystray Pillow
+          fi
+        shell: bash
+
+      - name: Build Python executable
+        if: startsWith(github.ref, 'refs/tags/') && matrix.enable_gui == true
+        run: |
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            pyinstaller --onefile --windowed --name ECHWorkersGUI gui.py
+          elif [ "${{ matrix.goos }}" == "linux" ]; then
+            if python -c "import PyQt5.QtWidgets" 2>/dev/null; then
+              pyinstaller --onefile --name ECHWorkersGUI gui.py
+            else
+              echo "PyQt5 not available, skipping GUI build for Linux"
+              echo "Only Go executable will be included"
+            fi
+          else
+            pyinstaller --onefile --name ECHWorkersGUI gui.py
+          fi
+        shell: bash
+
+      - name: Prepare release files
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          mkdir -p release
+          
+          # Go 可执行文件
+          cp ech-workers${{ matrix.exe_ext }} release/
+          
+          # GUI（仅桌面版）
+          if [ "${{ matrix.enable_gui }}" = "true" ]; then
+            if [ "${{ matrix.goos }}" == "windows" ]; then
+              if [ -f "dist/ECHWorkersGUI.exe" ]; then
+                cp dist/ECHWorkersGUI.exe release/
+              fi
+            else
+              if [ -f "dist/ECHWorkersGUI" ]; then
+                cp dist/ECHWorkersGUI release/
+                chmod +x release/ECHWorkersGUI
+              elif [ "${{ matrix.goos }}" == "linux" ]; then
+                echo "GUI executable not built, only Go executable will be included"
+              fi
+            fi
+          fi
+          
+          # README
+          {
+            echo "ECH Workers Client"
+            echo ""
+            echo "Target: ${{ matrix.target }}"
+            echo ""
+            echo "Files:"
+            echo "- ech-workers${{ matrix.exe_ext }}: Go compiled core proxy program"
+            if [ "${{ matrix.enable_gui }}" = "true" ]; then
+              if [ "${{ matrix.goos }}" == "windows" ]; then
+                echo "- ECHWorkersGUI.exe: Python GUI client (standalone executable)"
+              elif [ -f "release/ECHWorkersGUI" ]; then
+                echo "- ECHWorkersGUI: Python GUI client (standalone executable)"
+              else
+                echo "- Note: GUI client not available for this architecture"
+                echo "  Use ech-workers from command line instead"
+              fi
+            else
+              echo "- GUI client not included for this build (CLI only, suitable for routers / servers)"
+            fi
+            echo ""
+            echo "Usage:"
+            if [ "${{ matrix.goos }}" == "windows" ]; then
+              echo "1. Double-click ECHWorkersGUI.exe to launch the GUI (if present)"
+              echo "2. Or run ech-workers.exe from command line"
+            else
+              echo "1. Run ./ech-workers from command line"
+              if [ "${{ matrix.enable_gui }}" = "true" ]; then
+                echo "2. Or run ./ECHWorkersGUI to launch the GUI"
+              fi
+            fi
+            echo ""
+            echo "System Requirements:"
+            if [ "${{ matrix.target }}" = "softrouter" ]; then
+              echo "- Linux soft router / NAS (OpenWrt / iStoreOS / x86_64 or ARM64)"
+              echo "- Architecture: ${{ matrix.goarch }}"
+              echo "- Recommended: run from SSH / shell"
+            else
+              if [ "${{ matrix.goos }}" == "windows" ]; then
+                echo "- Windows: Windows 10+"
+              elif [ "${{ matrix.goos }}" == "darwin" ]; then
+                echo "- macOS: macOS 10.13+"
+              else
+                echo "- Linux: Ubuntu 18.04+ / Debian 10+ / CentOS 7+"
+                echo "- Architecture: ${{ matrix.goarch }}"
+              fi
+            fi
+            echo "- No Python installation required for running the binaries"
+          } > release/README.txt
+        shell: bash
+
+      - name: Create archive (Windows)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.goos == 'windows'
+        run: |
+          cd release
+          powershell Compress-Archive -Path * -DestinationPath ../ECHWorkers-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.artifact_suffix }}${{ matrix.archive_ext }} -Force
+        shell: powershell
+
+      - name: Create archive (macOS)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.goos == 'darwin'
+        run: |
+          cd release
+          zip -r ../ECHWorkers-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.artifact_suffix }}${{ matrix.archive_ext }} .
+        shell: bash
+
+      - name: Create archive (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.goos == 'linux'
+        run: |
+          cd release
+          tar -czf ../ECHWorkers-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.artifact_suffix }}${{ matrix.archive_ext }} .
+        shell: bash
+
+      - name: Upload artifacts
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECHWorkers-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.artifact_suffix }}
+          path: ECHWorkers-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.artifact_suffix }}${{ matrix.archive_ext }}
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

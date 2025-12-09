@@ -1,0 +1,83 @@
+name: Build OpenWrt IPK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build IPK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64]
+        sdk_url: [https://downloads.openwrt.org/snapshots/targets/x86/64/openwrt-sdk-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.xz]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare Package Source
+        run: |
+          # Create package directory in the workspace
+          mkdir -p package/ech-wk/src
+          
+          # Copy package definition
+          cp -r ech-wk-package/* package/ech-wk/
+          
+          # Copy Go source code to package src directory
+          cp ech-workers.go package/ech-wk/src/
+          
+          # Ensure go.mod exists (it should be in ech-wk-package/src/go.mod)
+          if [ ! -f package/ech-wk/src/go.mod ]; then
+            echo "Error: go.mod not found in package source"
+            exit 1
+          fi
+
+      - name: Download and Setup OpenWrt SDK
+        run: |
+          wget -O sdk.tar.xz ${{ matrix.sdk_url }}
+          mkdir sdk
+          tar -xJf sdk.tar.xz -C sdk --strip-components=1
+          cd sdk
+          
+          # Update feeds
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Build Package
+        run: |
+          cd sdk
+          
+          # Link our package
+          # We need to link the 'package/ech-wk' from our workspace to the SDK's package/ech-wk
+          # The SDK is in $GITHUB_WORKSPACE/sdk
+          # Our package is in $GITHUB_WORKSPACE/package/ech-wk
+          ln -s $GITHUB_WORKSPACE/package/ech-wk package/ech-wk
+          
+          # Select the package
+          # We use .config to select the package. 
+          # CONFIG_PACKAGE_ech-wk=m
+          # CONFIG_PACKAGE_luci-app-ech-wk=m
+          echo "CONFIG_PACKAGE_ech-wk=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ech-wk=m" >> .config
+          
+          # Expand configuration
+          make defconfig
+          
+          # Compile
+          make package/ech-wk/compile V=s
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ech-wk-ipk-${{ matrix.arch }}
+          path: sdk/bin/packages/*/base/*.ipk
+
+      - name: Upload LuCI Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: luci-app-ech-wk-ipk-${{ matrix.arch }}
+          path: sdk/bin/packages/*/luci/*.ipk
