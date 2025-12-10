@@ -71,8 +71,14 @@ jobs:
           tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
           cd sdk
           
-          # Update feeds (Full update for stability)
-          ./scripts/feeds update -a
+          # Update feeds with retry logic
+          for i in 1 2 3; do
+            echo "Attempt $i: Updating feeds..."
+            ./scripts/feeds update -a && break
+            echo "Retry in 10 seconds..."
+            sleep 10
+          done
+          
           ./scripts/feeds install -a
 
 
