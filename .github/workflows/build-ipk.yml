@@ -97,18 +97,14 @@ jobs:
           
           # Package is already at sdk/package/ech-wk from Prepare step
           
-          # Select the package
+          # Select the package (LuCI is now integrated)
           echo "CONFIG_PACKAGE_ech-wk=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ech-wk=m" >> .config
           
           # Expand configuration
           make defconfig
           
-          # Compile main package
+          # Compile (LuCI is integrated into ech-wk package)
           make package/ech-wk/compile V=s
-          
-          # Compile LuCI package
-          make package/luci-app-ech-wk/compile V=s || echo "LuCI package may have been built with main package"
 
       - name: Collect and Debug Artifacts
         run: |

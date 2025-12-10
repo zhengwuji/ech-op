@@ -8,8 +8,6 @@ PKG_MAINTAINER:=User <user@example.com>
 PKG_LICENSE:=MIT
 
 # Go package configuration
-# If you have lang/golang/package.mk, use it. Otherwise, we can use a simpler approach.
-# Assuming modern OpenWrt with Go support.
 PKG_BUILD_DEPENDS:=golang/host
 PKG_BUILD_PARALLEL:=1
 PKG_USE_MIPS16:=0
@@ -23,7 +21,6 @@ GO_PKG_CGO_ENABLED:=0
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
-# Try to include golang package if available, otherwise manual build
 -include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
 define Build/Prepare
@@ -34,28 +31,17 @@ endef
 define Package/ech-wk
   SECTION:=net
   CATEGORY:=Network
-  TITLE:=ECH Workers Proxy
-  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle
+  TITLE:=ECH Workers Proxy with LuCI
+  DEPENDS:=$(GO_ARCH_DEPENDS) +ca-bundle +luci-base
 endef
 
 define Package/ech-wk/description
-  ECH Workers Proxy Client
+  ECH Workers Proxy Client with integrated LuCI interface.
+  一站式安装：包含主程序和 LuCI 管理界面。
 endef
 
 define Package/ech-wk/conffiles
 /etc/config/ech-wk
-endef
-
-define Package/luci-app-ech-wk
-  SECTION:=luci
-  CATEGORY:=LuCI
-  SUBMENU:=3. Applications
-  TITLE:=LuCI support for ech-wk
-  DEPENDS:=+ech-wk +luci-base
-endef
-
-define Package/luci-app-ech-wk/description
-  LuCI support for ech-wk
 endef
 
 # If golang-package.mk is not included, we need manual build instructions
@@ -67,25 +53,29 @@ ifndef GO_PKG_BUILD_BIN_DIR
 endif
 
 define Package/ech-wk/install
+	# 安装主程序
 	$(INSTALL_DIR) $(1)/usr/bin
 	$(if $(GO_PKG_BUILD_BIN_DIR),\
 		$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/ech-wk $(1)/usr/bin/,\
 		$(INSTALL_BIN) $(PKG_BUILD_DIR)/ech-wk $(1)/usr/bin/)
 	
+	# 安装配置文件
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/etc/config/ech-wk $(1)/etc/config/ech-wk
 	
+	# 安装启动脚本
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/etc/init.d/ech-wk $(1)/etc/init.d/ech-wk
-endef
-
-define Package/luci-app-ech-wk/install
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci
-	$(CP) ./luasrc/* $(1)/usr/lib/lua/luci/
 	
+	# 安装 LuCI 界面文件
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/controller
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi
+	$(INSTALL_DATA) ./luasrc/controller/ech-wk.lua $(1)/usr/lib/lua/luci/controller/
+	$(INSTALL_DATA) ./luasrc/model/cbi/ech-wk.lua $(1)/usr/lib/lua/luci/model/cbi/
+	
+	# 安装 ACL 权限文件
 	$(INSTALL_DIR) $(1)/usr/share/rpcd/acl.d
 	$(INSTALL_DATA) ./root/usr/share/rpcd/acl.d/luci-app-ech-wk.json $(1)/usr/share/rpcd/acl.d/
 endef
 
 $(eval $(call BuildPackage,ech-wk))
-$(eval $(call BuildPackage,luci-app-ech-wk))
