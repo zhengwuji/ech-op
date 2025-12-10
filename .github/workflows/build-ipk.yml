@@ -99,8 +99,7 @@ jobs:
         run: |
           cd sdk
           
-          # Link our package
-          ln -s $GITHUB_WORKSPACE/package/ech-wk package/ech-wk
+          # Package is already at sdk/package/ech-wk from Prepare step
           
           # Select the package
           echo "CONFIG_PACKAGE_ech-wk=m" >> .config
