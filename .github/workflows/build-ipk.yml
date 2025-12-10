@@ -56,7 +56,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zstd
           wget -O sdk.tar.zst ${{ matrix.sdk_url }}
-          mkdir sdk
+          mkdir -p sdk
           tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
           cd sdk
           
