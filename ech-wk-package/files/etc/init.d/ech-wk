@@ -48,9 +48,10 @@ start_service() {
     
     procd_open_instance
     procd_set_param command "$PROG"
-    procd_append_param command -server "$server_addr"
-    procd_append_param command -listen "$listen_addr"
-    procd_append_param command -doh "$dns_server"
+    # 使用正确的参数名（与 Go 程序一致）
+    procd_append_param command -f "$server_addr"
+    procd_append_param command -l "$listen_addr"
+    procd_append_param command -dns "$dns_server"
     procd_append_param command -ech "$ech_domain"
     
     if [ -n "$token" ]; then
