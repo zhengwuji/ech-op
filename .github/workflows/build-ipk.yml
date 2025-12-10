@@ -32,6 +32,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('ech-wk-package/src/go.mod') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
       - name: Prepare Package
         run: |
           # 1. Prepare Source Code
@@ -75,15 +85,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Cache Go Modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+
 
       - name: Cache OpenWrt DL
         uses: actions/cache@v4
