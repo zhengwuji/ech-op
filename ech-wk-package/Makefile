@@ -64,7 +64,9 @@ endif
 
 define Package/ech-wk/install
 	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/ech-wk $(1)/usr/bin/
+	$(if $(GO_PKG_BUILD_BIN_DIR),\
+		$(INSTALL_BIN) $(GO_PKG_BUILD_BIN_DIR)/ech-wk $(1)/usr/bin/,\
+		$(INSTALL_BIN) $(PKG_BUILD_DIR)/ech-wk $(1)/usr/bin/)
 	
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/etc/config/ech-wk $(1)/etc/config/ech-wk
