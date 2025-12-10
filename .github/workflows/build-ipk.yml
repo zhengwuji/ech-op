@@ -58,11 +58,9 @@ jobs:
           tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
           cd sdk
           
-          # Optimize feeds: only update packages and luci
-          # This significantly reduces build time
-          ./scripts/feeds update packages luci
-          ./scripts/feeds install -a -p packages
-          ./scripts/feeds install -a -p luci
+          # Update feeds (Full update for stability)
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
 
       - name: Cache Go Modules
         uses: actions/cache@v4
