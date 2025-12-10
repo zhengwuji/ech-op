@@ -40,7 +40,9 @@ jobs:
           
           # 2. Initialize Go Module and Vendor
           cd ech-wk-package/src
-          go mod init github.com/user/ech-wk
+          if [ ! -f go.mod ]; then
+            go mod init github.com/user/ech-wk
+          fi
           go mod tidy
           go mod vendor
           cd ../..
