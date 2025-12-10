@@ -112,11 +112,22 @@ jobs:
           # Compile
           make package/ech-wk/compile V=s
 
+      - name: Collect and Debug Artifacts
+        run: |
+          echo "Listing bin directory:"
+          ls -R sdk/bin || echo "bin dir not found"
+          
+          mkdir -p artifacts_out
+          find sdk/bin -name "*.ipk" -exec cp {} artifacts_out/ \;
+          
+          echo "Collected artifacts:"
+          ls -R artifacts_out
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ech-wk-${{ matrix.arch }}
-          path: sdk/bin/packages/**/*.ipk
+          path: artifacts_out/*.ipk
 
   release:
     name: Create Release

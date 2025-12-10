@@ -16,6 +16,7 @@ PKG_USE_MIPS16:=0
 
 GO_PKG:=github.com/user/ech-wk
 GO_PKG_LDFLAGS_X:=main.Version=$(PKG_VERSION)
+GO_PKG_LDFLAGS:=-s -w
 GO_MIPS:=softfloat
 GO_MIPS64:=softfloat
 GO_PKG_CGO_ENABLED:=0
