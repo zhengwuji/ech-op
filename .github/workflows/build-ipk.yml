@@ -26,25 +26,6 @@ jobs:
           - arch: mips_24kc
             sdk_url: https://downloads.openwrt.org/snapshots/targets/ath79/generic/openwrt-sdk-ath79-generic_gcc-14.3.0_musl.Linux-x86_64.tar.zst
           - arch: mipsel_24kc
-            sdk_url: https://downloads.openwrt.org/snapshots/targets/ramips/mt7621/openwrt-sdk-ramips-mt7621_gcc-14.3.0_musl.Linux-x86_64.tar.zst
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Prepare Package Source
-        run: |
-          # Create package directory in the workspace
-          mkdir -p package/ech-wk/src
-          
-          # Copy package definition
-          cp -r ech-wk-package/* package/ech-wk/
-          
-          # Copy Go source code to package src directory
-          cp ech-workers.go package/ech-wk/src/
-          
-          # Ensure go.mod exists (it should be in ech-wk-package/src/go.mod)
-          if [ ! -f package/ech-wk/src/go.mod ]; then
             echo "Error: go.mod not found in package source"
             exit 1
           fi

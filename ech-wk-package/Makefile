@@ -22,6 +22,11 @@ include $(INCLUDE_DIR)/nls.mk
 # Try to include golang package if available, otherwise manual build
 -include $(TOPDIR)/feeds/packages/lang/golang/golang-package.mk
 
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
+endef
+
 define Package/ech-wk
   SECTION:=net
   CATEGORY:=Network
