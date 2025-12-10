@@ -57,9 +57,29 @@ jobs:
           tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
           cd sdk
           
-          # Update feeds
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          # Optimize feeds: only update packages and luci
+          # This significantly reduces build time
+          ./scripts/feeds update packages luci
+          ./scripts/feeds install -a -p packages
+          ./scripts/feeds install -a -p luci
+
+      - name: Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache OpenWrt DL
+        uses: actions/cache@v4
+        with:
+          path: sdk/dl
+          key: ${{ runner.os }}-openwrt-dl-${{ matrix.arch }}-${{ hashFiles('**/*.mk') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-${{ matrix.arch }}-
 
       - name: Build Package
         run: |
