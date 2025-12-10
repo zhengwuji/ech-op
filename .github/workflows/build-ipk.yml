@@ -34,24 +34,18 @@ jobs:
 
       - name: Prepare Package
         run: |
-          # Initialize Go module and vendor dependencies
+          # 1. Prepare Source Code
+          mkdir -p ech-wk-package/src
+          cp ech-workers.go ech-wk-package/src/
+          
+          # 2. Initialize Go Module and Vendor
+          cd ech-wk-package/src
           go mod init github.com/user/ech-wk
           go mod tidy
           go mod vendor
+          cd ../..
           
-          mkdir -p ech-wk-package/src
-          cp ech-workers.go ech-wk-package/src/
-          cp go.mod ech-wk-package/src/
-          cp go.sum ech-wk-package/src/
-          cp -r vendor ech-wk-package/src/
-          
-          # Copy other package files
-          cp -r files ech-wk-package/
-          cp -r luasrc ech-wk-package/
-          cp -r root ech-wk-package/
-          cp Makefile ech-wk-package/
-          
-          # Move to SDK package directory
+          # 3. Move to SDK package directory
           mkdir -p sdk/package
           cp -r ech-wk-package sdk/package/ech-wk
 
