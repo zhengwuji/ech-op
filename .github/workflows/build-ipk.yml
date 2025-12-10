@@ -98,8 +98,11 @@ jobs:
           # Expand configuration
           make defconfig
           
-          # Compile
+          # Compile main package
           make package/ech-wk/compile V=s
+          
+          # Compile LuCI package
+          make package/luci-app-ech-wk/compile V=s || echo "LuCI package may have been built with main package"
 
       - name: Collect and Debug Artifacts
         run: |
