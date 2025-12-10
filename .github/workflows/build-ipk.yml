@@ -51,11 +51,22 @@ jobs:
           mkdir -p sdk/package
           cp -r ech-wk-package sdk/package/ech-wk
 
+      - name: Cache SDK File
+        id: cache-sdk
+        uses: actions/cache@v4
+        with:
+          path: sdk.tar.zst
+          key: ${{ runner.os }}-openwrt-sdk-${{ matrix.arch }}-${{ matrix.sdk_url }}
+
       - name: Download and Setup OpenWrt SDK
         run: |
           sudo apt-get update
-          sudo apt-get install -y zstd
-          wget -O sdk.tar.zst ${{ matrix.sdk_url }}
+          sudo apt-get install -y zstd aria2
+          
+          if [ ! -f sdk.tar.zst ]; then
+            aria2c -x 10 -s 10 -o sdk.tar.zst ${{ matrix.sdk_url }}
+          fi
+          
           mkdir -p sdk
           tar --zstd -xf sdk.tar.zst -C sdk --strip-components=1
           cd sdk
