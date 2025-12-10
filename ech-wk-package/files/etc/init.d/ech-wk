@@ -46,6 +46,9 @@ start_service() {
     echo "[$(date)] [系统] 服务器: $server_addr" >> "$LOGFILE"
     echo "[$(date)] [系统] 监听: $listen_addr" >> "$LOGFILE"
     
+    # 增加文件描述符限制，防止 "too many open files" 错误
+    ulimit -n 65535
+    
     procd_open_instance
     procd_set_param command "$PROG"
     # 使用正确的参数名（与 Go 程序一致）
