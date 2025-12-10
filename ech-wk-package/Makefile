@@ -16,6 +16,8 @@ PKG_USE_MIPS16:=0
 
 GO_PKG:=github.com/user/ech-wk
 GO_PKG_LDFLAGS_X:=main.Version=$(PKG_VERSION)
+GO_MIPS:=softfloat
+GO_MIPS64:=softfloat
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/nls.mk
