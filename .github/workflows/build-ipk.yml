@@ -15,8 +15,30 @@ jobs:
   build:
     name: Build IPK
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - id: x86_64
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/x86/64/openwrt-sdk-24.10.0-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-x86_64
+          - id: rockchip_armv8
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/rockchip/armv8/openwrt-sdk-24.10.0-rockchip-armv8_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-rockchip-armv8
+          - id: mediatek_filogic
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/mediatek/filogic/openwrt-sdk-24.10.0-mediatek-filogic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-mediatek-filogic
+          - id: ipq807x_generic
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/ipq807x/generic/openwrt-sdk-24.10.0-ipq807x-generic_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-ipq807x-generic
+          - id: bcm27xx_bcm2711
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/bcm27xx/bcm2711/openwrt-sdk-24.10.0-bcm27xx-bcm2711_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-bcm27xx-bcm2711
+          - id: ramips_mt7621
+            sdk_url: https://downloads.openwrt.org/releases/24.10.0/targets/ramips/mt7621/openwrt-sdk-24.10.0-ramips-mt7621_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+            artifact: ech-wk-ramips-mt7621
     env:
-      SDK_URL: https://downloads.openwrt.org/releases/24.10.0/targets/x86/64/openwrt-sdk-24.10.0-x86-64_gcc-13.3.0_musl.Linux-x86_64.tar.zst
+      SDK_URL: ${{ matrix.target.sdk_url }}
 
     steps:
       - name: Checkout code
@@ -56,7 +78,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: sdk.tar.zst
-          key: ${{ runner.os }}-openwrt-sdk-x86_64-${{ env.SDK_URL }}
+          key: ${{ runner.os }}-openwrt-sdk-${{ matrix.target.id }}-${{ env.SDK_URL }}
 
       - name: Download and Setup OpenWrt SDK
         run: |
@@ -87,9 +109,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: sdk/dl
-          key: ${{ runner.os }}-openwrt-dl-x86_64-${{ hashFiles('**/*.mk') }}
+          key: ${{ runner.os }}-openwrt-dl-${{ matrix.target.id }}-${{ hashFiles('**/*.mk') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-dl-x86_64-
+            ${{ runner.os }}-openwrt-dl-${{ matrix.target.id }}-
 
       - name: Build Package
         run: |
@@ -120,7 +142,7 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ech-wk-x86_64
+          name: ${{ matrix.target.artifact }}
           path: artifacts_out/*.ipk
 
   release:

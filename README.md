@@ -78,6 +78,19 @@ rm -rf /tmp/luci-*
 | **分流设置** | 全局代理 / 跳过中国大陆 / 仅代理被墙站点 / 直连 |
 | **运行日志** | 实时查看日志，一键清空 |
 
+## 构建产物与设备适配
+
+GitHub Actions 会为主流 OpenWrt 设备生成 IPK（保留原有 x86 正常构建），下载对应架构的 IPK 安装即可：
+
+- `ech-wk_x86_64.ipk`：x86/64 通用 PC、工控机（原有构建保持不变）
+- `ech-wk-rockchip-armv8.ipk`：Rockchip RK35xx/RK33xx 系列（如 Radxa ROCK、NanoPi R5 系列、Hinlink OPC 等）
+- `ech-wk-mediatek-filogic.ipk`：联发科 Filogic 系列（如 小米 AX6000T/AX4200T、红米 AX6000/AX3000T、360T7 等同平台）
+- `ech-wk-ipq807x-generic.ipk`：高通 IPQ807x 系列（如 红米 AX6/小米 AX3600、竞斗云 3.0、网件部分 RAX 型号）
+- `ech-wk-bcm27xx-bcm2711.ipk`：树莓派 4B/400/CM4 等 BCM2711 平台
+- `ech-wk-ramips-mt7621.ipk`：MT7621 主流路由（如 斐讯 K2P、Newifi D2、GL.iNet MT1300/MT3000 等）
+
+> 如果需要新增其它平台，请在 Issue 中留言型号与架构，我们会再补充新的构建目标。
+
 ## 命令行使用
 
 如果您不使用 LuCI 界面，也可以直接通过命令行运行：
